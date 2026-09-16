@@ -1,6 +1,6 @@
 # Model Rocket Location Beacon
 
-Firmware for a location signalling beacon built for my university\u2019s rocketry team using an STM32G0.
+Firmware for a location signalling beacon built for my university's rocketry team using an STM32G0.
 
 > [!NOTE]
 > This is the first version of a year-long project *(rocket will launch around July 2027)*.
