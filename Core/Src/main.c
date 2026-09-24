@@ -103,18 +103,55 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  uint8_t rx[5000];
+  uint8_t msg[128];
+  uint16_t rx_len = 0;
+  uint16_t to_transfer = 0;
+//  uint8_t tx_ongoing = 0;
+
+  uint8_t data;
+  uint8_t nl = '\n';
 
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  HAL_UART_Receive(&huart1, rx, sizeof(rx), 750);
+	  // if data transfer is ongoing
+//	  if (to_transfer && (hlpuart1.Instance->ISR & USART_ISR_TXE_TXFNF))
+//	  {
+//		  hlpuart1.Instance->TDR = msg[sizeof(msg) - to_transfer];
+//
+//          --to_transfer;
+//	  }
+//
+//	  // if incoming data
+//	  if (huart1.Instance->ISR & USART_ISR_RXNE_RXFNE)
+//	  {
+//          if ((sizeof(msg) - to_transfer) > rx_len)
+//          {
+//        	  msg[rx_len++] = huart1.Instance->RDR;
+//        	  ++to_transfer;
+//          }
+//          else
+//              continue;
+//
+//          if (rx_len == sizeof(msg))
+//          {
+//              rx_len = 0;
+//          }
+//	  }
 
-	  if (rx[0] == '$')
-		  HAL_UART_Transmit(&hlpuart1, rx, sizeof(rx), 1000);
+	  if (huart1.Instance->ISR & USART_ISR_RXNE_RXFNE)
+	  {
+		  data = huart1.Instance->RDR & 0xFF;
+		  hlpuart1.Instance->TDR = data;
+	  }
 
+	  if (huart1.Instance->ISR & USART_ISR_IDLE)
+	  {
+		  huart1.Instance->ICR = USART_ICR_IDLECF;
+		  hlpuart1.Instance->TDR = nl;
+	  }
   }
   /* USER CODE END 3 */
 }
