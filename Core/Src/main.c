@@ -23,8 +23,8 @@
 /* USER CODE BEGIN Includes */
 
 #include <stdint.h>
-#include "y_lpuart.h"
 #include "ublox.h"
+#include "cmsis_gcc.h"
 
 /* USER CODE END Includes */
 
@@ -63,6 +63,17 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+/* state machine */
+typedef enum
+{
+    asleep     = 0,
+    listening  = 1,
+    send_ready = 2,
+    init       = 3
+} GlobalState;
+
+GlobalState global_state = init;
+
 /* USER CODE END 0 */
 
 /**
@@ -72,88 +83,103 @@ static void MX_USART1_UART_Init(void);
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
+    /* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+    uBLOX_BufferTypeDef receive_buffer;
+    uint8_t transmit_buffer[256];
 
-  /* MCU Configuration--------------------------------------------------------*/
+    /* USER CODE END 1 */
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    /* MCU Configuration--------------------------------------------------------*/
 
-  /* USER CODE BEGIN Init */
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+    HAL_Init();
+    uint8_t receive_data;
 
-  /* USER CODE END Init */
+    /* USER CODE BEGIN Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+    /* USER CODE END Init */
 
-  /* USER CODE BEGIN SysInit */
+    /* Configure the system clock */
+    SystemClock_Config();
 
-  /* USER CODE END SysInit */
+    /* USER CODE BEGIN SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_LPUART1_UART_Init();
-  MX_USART1_UART_Init();
-  /* USER CODE BEGIN 2 */
+    /* USER CODE END SysInit */
 
-  /* USER CODE END 2 */
+    /* Initialize all configured peripherals */
+    MX_GPIO_Init();
+    MX_LPUART1_UART_Init();
+    MX_USART1_UART_Init();
+    /* USER CODE BEGIN 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+    uBLOX_BufferInit(&receive_buffer);
 
-  uint8_t msg[128];
-  uint16_t rx_len = 0;
-  uint16_t to_transfer = 0;
-//  uint8_t tx_ongoing = 0;
+    global_state = listening;
 
-  uint8_t data;
-  uint8_t nl = '\n';
+    /* USER CODE END 2 */
 
-  while (1)
-  {
-    /* USER CODE END WHILE */
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
 
-    /* USER CODE BEGIN 3 */
-	  // if data transfer is ongoing
-//	  if (to_transfer && (hlpuart1.Instance->ISR & USART_ISR_TXE_TXFNF))
-//	  {
-//		  hlpuart1.Instance->TDR = msg[sizeof(msg) - to_transfer];
-//
-//          --to_transfer;
-//	  }
-//
-//	  // if incoming data
-//	  if (huart1.Instance->ISR & USART_ISR_RXNE_RXFNE)
-//	  {
-//          if ((sizeof(msg) - to_transfer) > rx_len)
-//          {
-//        	  msg[rx_len++] = huart1.Instance->RDR;
-//        	  ++to_transfer;
-//          }
-//          else
-//              continue;
-//
-//          if (rx_len == sizeof(msg))
-//          {
-//              rx_len = 0;
-//          }
-//	  }
+    while (1)
+    {
+        /* USER CODE END WHILE */
 
-	  if (huart1.Instance->ISR & USART_ISR_RXNE_RXFNE)
-	  {
-		  data = huart1.Instance->RDR & 0xFF;
-		  hlpuart1.Instance->TDR = data;
-	  }
+        /* USER CODE BEGIN 3 */
 
-	  if (huart1.Instance->ISR & USART_ISR_IDLE)
-	  {
-		  huart1.Instance->ICR = USART_ICR_IDLECF;
-		  hlpuart1.Instance->TDR = nl;
-	  }
-  }
-  /* USER CODE END 3 */
+        /*
+        if (huart1.Instance->ISR & USART_ISR_RXNE_RXFNE)
+        {
+          data = huart1.Instance->RDR & 0xFF;
+          hlpuart1.Instance->TDR = data;
+        }
+
+        if (huart1.Instance->ISR & USART_ISR_IDLE)
+        {
+          huart1.Instance->ICR = USART_ICR_IDLECF;
+          hlpuart1.Instance->TDR = nl;
+        }
+        */
+
+        if (global_state == init)
+        {
+            uBLOX_BufferInit(&receive_buffer);
+            global_state = listening;
+        }
+
+        /* note: the module doesn't listen and transmit at the same time, so data processing
+         * can safely happen if not in the "listening" state */
+        switch (global_state)
+        {
+            case listening:
+                // incoming data check
+                if (huart1.Instance->ISR & USART_ISR_RXNE_RXFNE)
+                {
+                    receive_data = huart1.Instance->RDR & 0xFF;
+                    __COMPILER_BARRIER();
+                    if (uBLOX_BufferPush(&receive_buffer, receive_data) != 0)
+                    {
+                        /* TODO: figure out how to handle buffer not having space for more */
+                    }
+                }
+
+                if (huart1.Instance->ISR & USART_ISR_IDLE)
+                {
+                    huart1.Instance->ICR = USART_ICR_IDLECF;
+                    global_state = send_ready;
+                }
+                break;
+            case send_ready:
+                break;
+        }
+
+
+        if (global_state == send_ready)
+        {
+        }
+    }
+    /* USER CODE END 3 */
 }
 
 /**

@@ -3,6 +3,43 @@
 
 
 #include <stdint.h>
+#include <stdbool.h>
+
+
+/* generic */
+typedef struct
+{
+    uint8_t buffer[1024];
+    volatile uint16_t head;
+    volatile uint16_t tail;
+} uBLOX_BufferTypeDef;
+
+
+/* NMEA */
+#define ANTSTATUS_START_INDEX   16
+#define ANTSTATUS_PREFIX        "ANTSTATUS="
+#define ANTSTATUS_PREFIX_LEN    (sizeof(ANTSTATUS_PREFIX) - 1)
+
+typedef enum
+{
+    NMEA_OK  = 0,
+    NMEA_ERR = 1,
+}NMEA_Status;
+
+typedef enum
+{
+    NMEA_ANT_INIT     = 0,
+    NMEA_ANT_DONTKNOW = 1,
+    NMEA_ANT_OK       = 2,
+    NMEA_ANT_SHORT    = 3,
+    NMEA_ANT_OPEN     = 4,
+    NMEA_ANT_ERR      = 5,
+} NMEA_AntStatus;
+
+typedef enum
+{
+    TXT = 0,
+} NMEA_MsgType;
 
 
 /* UBX datatypes */
@@ -71,6 +108,12 @@ typedef uint8_t     UBX_L;
 
 /* functions */
 uint16_t UBX_CalculateChecksum(uint8_t *pData, uint16_t length);
+bool NMEA_In_AntStatus(uint8_t *pMsg);
+
+/* buffer functions */
+void uBLOX_BufferInit(uBLOX_BufferTypeDef* buffer_t);
+uint8_t uBLOX_BufferPop(uBLOX_BufferTypeDef* buffer_t);
+uint8_t uBLOX_BufferPush(uBLOX_BufferTypeDef* buffer_t, uint8_t data);
 
 
 #endif
