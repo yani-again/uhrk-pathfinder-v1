@@ -69,8 +69,15 @@ typedef enum
     asleep     = 0,
     listening  = 1,
     send_ready = 2,
-    init       = 3
+    init       = 3,
+    processing = 4
 } GlobalState;
+
+typedef struct
+{
+    uint8_t buffer[128];
+    uint8_t len;
+} ProcessingBufferTypeDef;
 
 GlobalState global_state = init;
 
@@ -86,6 +93,7 @@ int main(void)
     /* USER CODE BEGIN 1 */
 
     uBLOX_BufferTypeDef receive_buffer;
+    ProcessingBufferTypeDef processing_buffer;
     uint8_t transmit_buffer[256];
 
     /* USER CODE END 1 */
@@ -114,6 +122,7 @@ int main(void)
     /* USER CODE BEGIN 2 */
 
     uBLOX_BufferInit(&receive_buffer);
+    processing_buffer.len = 0;
 
     global_state = listening;
 
@@ -167,7 +176,21 @@ int main(void)
                 if (huart1.Instance->ISR & USART_ISR_IDLE)
                 {
                     huart1.Instance->ICR = USART_ICR_IDLECF;
-                    global_state = send_ready;
+                    global_state = processing;
+                }
+                break;
+            case processing:
+                for (uint8_t i = 0; (i < sizeof(processing_buffer.buffer)) && (receive_buffer.buffer[i] != '\n'); ++i)
+                {
+                    /* TODO: redo this to use my buffer control functions */
+                    processing_buffer.buffer[i] = receive_buffer.buffer[i];
+                    ++(processing_buffer.len);
+                }
+
+                /* check for ANTSTATUS msg */
+                if (NMEA_In_AntStatus(processing_buffer.buffer))
+                {
+                    /* TODO: get & save antstatus */
                 }
                 break;
             case send_ready:

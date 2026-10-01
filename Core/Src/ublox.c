@@ -29,6 +29,11 @@ uint16_t UBX_CalculateChecksum(uint8_t *pData, uint16_t length)
  *   used for launch/land detection (in which case I'll work on it)
  */
 
+/*
+ * @brief Lets you know if an NMEA message is an ANTSTATUS message or not
+ *
+ * @param A single NMEA message starting with '$' and ending with the checksum
+ */
 bool NMEA_In_AntStatus(uint8_t *pMsg)
 {
     if (memcmp(&pMsg[ANTSTATUS_START_INDEX], ANTSTATUS_PREFIX, ANTSTATUS_PREFIX_LEN) != 0)
@@ -36,6 +41,11 @@ bool NMEA_In_AntStatus(uint8_t *pMsg)
     return true;
 }
 
+/*
+ * @brief Reports the ANTSTATUS of the relevant TXT message
+ *
+ * @param A valid ANTSTATUS NMEA message
+ */
 NMEA_AntStatus NMEA_Parse_AntStatus(uint8_t *pMsg)
 {
     uint8_t first_char = pMsg[ANTSTATUS_START_INDEX + ANTSTATUS_PREFIX_LEN];
